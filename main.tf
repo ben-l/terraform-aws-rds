@@ -55,8 +55,8 @@ resource "aws_security_group" "rds-sg" {
   }
 
   egress {
-    from_port        = 3306 
-    to_port          = 3306 
+    from_port        = var.port 
+    to_port          = var.port 
     protocol         = "tcp"
     cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["0.0.0.0/0"]
@@ -114,7 +114,10 @@ resource "aws_db_proxy" "rds_proxy" {
 
   auth {
     auth_scheme = "SECRETS"
-    iam_auth    = "REQUIRED"
+	#######
+	# disable iam auth connections to the proxy, keep the db user
+    iam_auth    = "DISABLED" 
+	#######
     secret_arn  = aws_secretsmanager_secret.rds_secret.arn
   }
 }
