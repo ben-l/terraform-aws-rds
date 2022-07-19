@@ -55,11 +55,11 @@ resource "aws_security_group" "rds-sg" {
   }
 
   egress {
-    from_port        = 0 
-    to_port          = 0 
-    protocol         = "-1"
+    from_port        = 3306 
+    to_port          = 3306 
+    protocol         = "tcp"
     cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    ipv6_cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
@@ -84,7 +84,7 @@ resource "aws_db_instance" "database" {
 }
 
 resource "aws_secretsmanager_secret" "rds_secret" {
-  name = "duck-rds-proxy-secret"
+  name = "duck-rds-proxy-secret-2"
   recovery_window_in_days = 7
   description = "Secret for RDS Proxy"
 }
@@ -114,7 +114,22 @@ resource "aws_db_proxy" "rds_proxy" {
 
   auth {
     auth_scheme = "SECRETS"
-    iam_auth    = "DISABLED" # disabled for testing purposes
+    iam_auth    = "REQUIRED"
     secret_arn  = aws_secretsmanager_secret.rds_secret.arn
   }
+}
+
+resource "aws_db_proxy_default_target_group" "target" {
+  db_proxy_name = aws_db_proxy.rds_proxy.name
+
+  connection_pool_config {
+    connection_borrow_timeout    = 120
+    max_connections_percent      = 100
+  }
+}
+
+resource "aws_db_proxy_target" "example" {
+  db_instance_identifier = aws_db_instance.database.id
+  db_proxy_name          = aws_db_proxy.rds_proxy.name
+  target_group_name      = aws_db_proxy_default_target_group.target.name
 }
